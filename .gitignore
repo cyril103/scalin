@@ -1,0 +1,18 @@
+# Fichiers générés
+build/
+*.o
+*.out
+*.asm
+
+# Fichiers temporaires
+*.swp
+*.swo
+*~
+
+# IDE
+.idea/
+.vscode/
+
+# Système
+.DS_Store
+Thumbs.db
