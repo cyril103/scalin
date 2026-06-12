@@ -10,7 +10,10 @@ std::string CodeGenerator::generate(std::unique_ptr<Stmt>& stmt) {
     for (const auto& data : dataSection) output << data << "\n";
     output << "\nsection .text\nglobal _start\n\n_start:\n    mov rbp, rsp\n";
     stmt->accept(*this);
-    output << "    mov rax, 60\n    xor rdi, rdi\n    syscall\n";
+    // Utiliser rax comme exit code (déjà dans rdi si nécessaire)
+    output << "    mov rdi, rax\n";  // Le résultat est dans rax, on le copie dans rdi (exit code)
+    output << "    mov rax, 60\n";    // syscall: exit
+    output << "    syscall\n";
     return output.str();
 }
 
