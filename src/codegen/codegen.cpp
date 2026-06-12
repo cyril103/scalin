@@ -98,9 +98,13 @@ std::any CodeGenerator::visitLiteralExpr(Expr& expr) {
 std::any CodeGenerator::visitBinaryExpr(Expr& expr) {
     auto& e = dynamic_cast<BinaryExpr&>(expr);
     e.left->accept(*this);
-    emit("push rax");
+    emit("push rax");  // Sauvegarder la valeur de gauche
+    
     e.right->accept(*this);
+    
+    // Récupérer la valeur de gauche dans rbx
     emit("pop rbx");
+    
     switch (e.op.type) {
         case TokenType::PLUS: emit("add rax, rbx"); break;
         case TokenType::MINUS: emit("sub rbx, rax"); emit("mov rax, rbx"); break;
@@ -109,10 +113,10 @@ std::any CodeGenerator::visitBinaryExpr(Expr& expr) {
         case TokenType::MOD: emit("cqo"); emit("idiv rbx"); emit("mov rax, rdx"); break;
         case TokenType::EQ: emit("cmp rax, rbx"); emit("sete al"); emit("movzx rax, al"); break;
         case TokenType::NEQ: emit("cmp rax, rbx"); emit("setne al"); emit("movzx rax, al"); break;
-        case TokenType::LT: emit("cmp rbx, rax"); emit("setl al"); emit("movzx rax, al"); break;
-        case TokenType::GT: emit("cmp rbx, rax"); emit("setg al"); emit("movzx rax, al"); break;
-        case TokenType::LE: emit("cmp rbx, rax"); emit("setle al"); emit("movzx rax, al"); break;
-        case TokenType::GE: emit("cmp rbx, rax"); emit("setge al"); emit("movzx rax, al"); break;
+        case TokenType::LT: emit("cmp rax, rbx"); emit("setl al"); emit("movzx rax, al"); break;
+        case TokenType::GT: emit("cmp rax, rbx"); emit("setg al"); emit("movzx rax, al"); break;
+        case TokenType::LE: emit("cmp rax, rbx"); emit("setle al"); emit("movzx rax, al"); break;
+        case TokenType::GE: emit("cmp rax, rbx"); emit("setge al"); emit("movzx rax, al"); break;
         default: throw std::runtime_error("Opérateur binaire non supporté");
     }
     return nullptr;
@@ -131,9 +135,15 @@ std::any CodeGenerator::visitUnaryExpr(Expr& expr) {
 
 std::any CodeGenerator::visitVariableExpr(Expr& expr) {
     auto& varExpr = dynamic_cast<VariableExpr&>(expr);
-    // Pour l'instant, on suppose que les variables sont des constantes
-    // (à améliorer plus tard avec un environnement de variables)
-    emit("mov rax, 0");  // Valeur par défaut
+    // Pour l'instant, on suppose que la variable est le premier paramètre (n)
+    // Les paramètres sont à [rbp+16], [rbp+24], etc. (car return address est à [rbp+8])
+    // On va utiliser [rbp+16] pour le premier paramètre
+    if (varExpr.name.lexeme == "n") {
+        emit("mov rax, [rbp+16]");
+    } else {
+        // Variable globale ou non trouvée : retourner 0
+        emit("mov rax, 0");
+    }
     return nullptr;
 }
 std::any CodeGenerator::visitGroupingExpr(Expr& expr) { dynamic_cast<GroupingExpr&>(expr).expression->accept(*this); return nullptr; }
@@ -155,7 +165,9 @@ std::any CodeGenerator::visitCallExpr(Expr& expr) {
     }
     
     // Nettoyer la pile (supprimer les arguments)
-    emit("add rsp", std::to_string(call.arguments.size() * 8));  // 8 octets par argument (x86-64)
+    // Note: call push l'adresse de retour, mais elle est poppée par ret
+    // Donc on nettoie seulement les arguments
+    emit("add rsp", std::to_string(call.arguments.size() * 8));
     
     return nullptr;
 }
@@ -207,7 +219,14 @@ std::any CodeGenerator::visitFunctionDecl(Stmt& stmt) {
     output << "    push rbp\n";
     output << "    mov rbp, rsp\n";
     
-    // Générer le corps de la fonction (supposons qu'il n'y a pas de paramètres pour l'instant)
+    // Allouer de l'espace pour les paramètres locaux (pour l'instant, on suppose 1 paramètre : n)
+    // Les paramètres sont passés sur la pile avant l'appel
+    // On les copie dans des emplacements locaux (rbp - 8, rbp - 16, etc.)
+    // Pour simplifier, on suppose que le premier paramètre est à [rbp+16] (car return address est à [rbp+8])
+    // Mais en réalité, les paramètres sont à [rbp+16], [rbp+24], etc. (car call push return address)
+    // On va utiliser [rbp+16] pour le premier paramètre
+    
+    // Générer le corps de la fonction
     if (auto* exprStmt = dynamic_cast<ExpressionStmt*>(func.body.get())) {
         exprStmt->expression->accept(*this);
     } else {
