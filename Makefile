@@ -25,8 +25,8 @@ $(TARGET): $(SOURCES)
 clean:
 	rm -rf $(BUILD_DIR)/*
 
-test_lexer: tests/test_lexer.cpp $(SOURCES)
-	$(CXX) $(CXXFLAGS) -o tests/test_lexer tests/test_lexer.cpp $(SOURCES)
+test_lexer: tests/test_lexer.cpp src/lexer/lexer.cpp
+	$(CXX) $(CXXFLAGS) -Isrc -o tests/test_lexer tests/test_lexer.cpp src/lexer/lexer.cpp
 	./tests/test_lexer
 
 .PHONY: all clean test_lexer
