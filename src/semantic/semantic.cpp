@@ -37,8 +37,9 @@ void SemanticAnalyzer::declareVariable(const std::string& name, std::unique_ptr<
 
 std::unique_ptr<Type> SemanticAnalyzer::getVariableType(const std::string& name) {
     for (Environment* env = currentEnv; env != nullptr; env = env->parent) {
-        if (env->variables.find(name) != env->variables.end()) {
-            return env->variables[name];
+        auto it = env->variables.find(name);
+        if (it != env->variables.end()) {
+            return it->second->clone();
         }
     }
     addError("Variable '" + name + "' non trouvée.");
