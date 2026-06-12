@@ -29,8 +29,8 @@ public:
 
 private:
     struct Environment {
-        std::unordered_map<std::string, std::unique_ptr<Type>> variables;
         Environment* parent = nullptr;
+        std::unordered_map<std::string, std::unique_ptr<Type>> variables;
     };
     Environment* currentEnv = nullptr;
     std::vector<std::string> errors;

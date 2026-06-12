@@ -24,6 +24,7 @@ class Type {
 public:
     virtual ~Type() = default;
     virtual std::string toString() const = 0;
+    virtual std::unique_ptr<Type> clone() const = 0;
 };
 
 class ASTVisitor {
@@ -64,6 +65,9 @@ public:
             default: return "Unknown";
         }
     }
+    std::unique_ptr<Type> clone() const override {
+        return std::make_unique<PrimitiveType>(kind);
+    }
 };
 
 class UserDefinedType : public Type {
@@ -71,6 +75,9 @@ public:
     std::string name;
     explicit UserDefinedType(std::string name) : name(std::move(name)) {} 
     std::string toString() const override { return name; }
+    std::unique_ptr<Type> clone() const override {
+        return std::make_unique<UserDefinedType>(name);
+    }
 };
 
 class GenericType : public Type {
@@ -88,6 +95,13 @@ public:
         result += "]";
         return result;
     }
+    std::unique_ptr<Type> clone() const override {
+        std::vector<std::unique_ptr<Type>> clonedArgs;
+        for (const auto& arg : typeArgs) {
+            clonedArgs.push_back(arg->clone());
+        }
+        return std::make_unique<GenericType>(baseName, std::move(clonedArgs));
+    }
 };
 
 class LiteralExpr : public Expr {
@@ -100,8 +114,8 @@ public:
 class BinaryExpr : public Expr {
 public:
     std::unique_ptr<Expr> left;
-    std::unique_ptr<Expr> right;
     Token op;
+    std::unique_ptr<Expr> right;
     BinaryExpr(std::unique_ptr<Expr> left, Token op, std::unique_ptr<Expr> right)
         : left(std::move(left)), op(op), right(std::move(right)) {} 
     std::any accept(ASTVisitor& visitor) override { return visitor.visitBinaryExpr(*this); }
@@ -109,8 +123,8 @@ public:
 
 class UnaryExpr : public Expr {
 public:
-    std::unique_ptr<Expr> right;
     Token op;
+    std::unique_ptr<Expr> right;
     UnaryExpr(Token op, std::unique_ptr<Expr> right)
         : op(op), right(std::move(right)) {} 
     std::any accept(ASTVisitor& visitor) override { return visitor.visitUnaryExpr(*this); }

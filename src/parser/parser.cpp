@@ -300,7 +300,7 @@ Token Parser::consume(TokenType type, const std::string& message) {
     throw error(peek(), message);
 }
 Token Parser::advance() { if (!isAtEnd()) current++; return previous(); }
-Parser::ParseError Parser::error(const Token& token, const std::string& message) {
+ParseError Parser::error(const Token& token, const std::string& message) {
     return ParseError("[Ligne " + std::to_string(token.line) + "] Erreur: " + message);
 }
 void Parser::synchronize() {

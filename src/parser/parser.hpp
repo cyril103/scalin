@@ -4,6 +4,12 @@
 #include "ast.hpp"
 #include <vector>
 #include <memory>
+#include <stdexcept>
+
+class ParseError : public std::runtime_error {
+public:
+    ParseError(const std::string& message) : std::runtime_error(message) {}
+};
 
 class Parser {
 public:
@@ -15,6 +21,9 @@ private:
     size_t current = 0;
 
     std::unique_ptr<Stmt> declaration();
+    std::unique_ptr<Stmt> classDeclaration();
+    std::unique_ptr<Stmt> functionDeclaration();
+    std::unique_ptr<Stmt> varDeclaration();
     std::unique_ptr<Stmt> statement();
     std::unique_ptr<Stmt> forStatement();
     std::unique_ptr<Stmt> ifStatement();
@@ -32,6 +41,7 @@ private:
     std::unique_ptr<Expr> factor();
     std::unique_ptr<Expr> unary();
     std::unique_ptr<Expr> call();
+    std::unique_ptr<Expr> finishCall(std::unique_ptr<Expr> callee);
     std::unique_ptr<Expr> primary();
     std::unique_ptr<Type> type();
 
@@ -42,9 +52,6 @@ private:
     bool match(TokenType type);
     Token consume(TokenType type, const std::string& message);
     Token advance();
+    ParseError error(const Token& token, const std::string& message);
     void synchronize();
-    class ParseError : public std::runtime_error {
-    public:
-        ParseError(const std::string& message) : std::runtime_error(message) {}
-    };
 };
