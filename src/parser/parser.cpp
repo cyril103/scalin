@@ -1,6 +1,7 @@
 // src/parser/parser.cpp
 #include "parser.hpp"
 #include <stdexcept>
+#include <iostream>
 
 Parser::Parser(const std::vector<Token>& tokens) : tokens(tokens) {}
 
@@ -57,7 +58,17 @@ std::unique_ptr<Stmt> Parser::functionDeclaration() {
     std::unique_ptr<Type> returnType = nullptr;
     if (match(TokenType::COLON)) returnType = type();
     consume(TokenType::ASSIGN, "Attendu '=' après la déclaration de la fonction.");
-    return std::make_unique<FunctionDecl>(name, std::move(params), std::move(returnType), blockStatement());
+    
+    // Gérer les corps d'expression (ex: = a + b) ou les blocs (ex: = { ... })
+    std::unique_ptr<Stmt> body;
+    if (match(TokenType::LBRACE)) {
+        body = blockStatement();
+    } else {
+        // Corps d'expression: créer un ExpressionStmt
+        body = std::make_unique<ExpressionStmt>(expression());
+    }
+    consume(TokenType::SEMICOLON, "Attendu ';' après le corps de la fonction.");
+    return std::make_unique<FunctionDecl>(name, std::move(params), std::move(returnType), std::move(body));
 }
 
 std::unique_ptr<Type> Parser::type() {
@@ -280,8 +291,27 @@ std::unique_ptr<Expr> Parser::primary() {
     if (match(TokenType::STRING_LITERAL) || match(TokenType::CHAR_LITERAL)) {
         return std::make_unique<LiteralExpr>(previous().literal);
     }
-    if (match(TokenType::IDENTIFIER)) return std::make_unique<VariableExpr>(previous());
+    if (match(TokenType::IDENTIFIER)) {
+        Token name = previous();
+        // Vérifier si c'est un appel de fonction
+        if (match(TokenType::LPAREN)) {
+            return finishCall(std::make_unique<VariableExpr>(name));
+        }
+        return std::make_unique<VariableExpr>(name);
+    }
     if (match(TokenType::THIS)) return std::make_unique<ThisExpr>(previous());
+    if (match(TokenType::IF)) {
+        // Gérer les expressions if/else (comme en Scala)
+        consume(TokenType::LPAREN, "Attendu '(' après 'if'.");
+        std::unique_ptr<Expr> condition = expression();
+        consume(TokenType::RPAREN, "Attendu ')' après la condition.");
+        std::unique_ptr<Expr> thenBranch = expression();
+        std::unique_ptr<Expr> elseBranch = nullptr;
+        if (match(TokenType::ELSE)) {
+            elseBranch = expression();
+        }
+        return std::make_unique<IfExpr>(std::move(condition), std::move(thenBranch), std::move(elseBranch));
+    }
     if (match(TokenType::LPAREN)) {
         std::unique_ptr<Expr> expr = expression();
         consume(TokenType::RPAREN, "Attendu ')' après l'expression.");

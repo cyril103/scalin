@@ -36,6 +36,7 @@ public:
     virtual std::any visitVariableExpr(Expr& expr) = 0;
     virtual std::any visitGroupingExpr(Expr& expr) = 0;
     virtual std::any visitCallExpr(Expr& expr) = 0;
+    virtual std::any visitIfExpr(Expr& expr) = 0;
     virtual std::any visitGetExpr(Expr& expr) = 0;
     virtual std::any visitSetExpr(Expr& expr) = 0;
     virtual std::any visitThisExpr(Expr& expr) = 0;
@@ -152,6 +153,16 @@ public:
     CallExpr(std::unique_ptr<Expr> callee, std::vector<std::unique_ptr<Expr>> arguments)
         : callee(std::move(callee)), arguments(std::move(arguments)) {} 
     std::any accept(ASTVisitor& visitor) override { return visitor.visitCallExpr(*this); }
+};
+
+class IfExpr : public Expr {
+public:
+    std::unique_ptr<Expr> condition;
+    std::unique_ptr<Expr> thenBranch;
+    std::unique_ptr<Expr> elseBranch;
+    IfExpr(std::unique_ptr<Expr> condition, std::unique_ptr<Expr> thenBranch, std::unique_ptr<Expr> elseBranch)
+        : condition(std::move(condition)), thenBranch(std::move(thenBranch)), elseBranch(std::move(elseBranch)) {} 
+    std::any accept(ASTVisitor& visitor) override { return visitor.visitIfExpr(*this); }
 };
 
 class GetExpr : public Expr {

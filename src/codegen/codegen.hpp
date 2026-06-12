@@ -13,6 +13,7 @@ public:
     std::any visitVariableExpr(Expr& expr) override;
     std::any visitGroupingExpr(Expr& expr) override;
     std::any visitCallExpr(Expr& expr) override;
+    std::any visitIfExpr(Expr& expr) override;
     std::any visitGetExpr(Expr& expr) override;
     std::any visitSetExpr(Expr& expr) override;
     std::any visitThisExpr(Expr& expr) override;
